@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <WinSock2.h>
 #include <iostream>
+#include <vector>
 //#pragma comment(lib, "ws2_32.lib")
 using namespace std;
 enum CMD {
@@ -55,6 +56,87 @@ struct Error : public DataHeader
 		CMD_LOGOUT), result(-1) {}
 	int result;
 };
+
+
+// 创建全局socket数组，用来存放链接成功的客户端socket
+std::vector<SOCKET> g_clients;
+// 对客户端socket进行处理
+int processer(SOCKET sockClnt) {
+
+	// 5 接收客户端发送的请求
+	int rcvBufLen;
+	DataHeader dh;
+	rcvBufLen = recv(sockClnt, (char *)&dh, sizeof(DataHeader), 0);
+	if (rcvBufLen <= 0)
+	{
+		cout << "客户端退出，结束任务。" << endl;
+		return -1;
+	}
+
+	// 6 处理请求
+	switch (dh.cmd)
+	{
+	case CMD_LOGIN:
+	{
+		Login login;
+		recv(sockClnt, (char *)&login + sizeof(DataHeader), sizeof(Login) - sizeof(DataHeader), 0);
+		// 忽略对账号密码的验证，只是简单打印出来
+		cout << "收到命令 CMD_LOGIN： 信息长度=" << login.dataLen << " 用户名="
+			<< login.username << " 密码=" << login.password << endl;
+		cout << "发送登录回执信息，";
+		LoginResult lgir(0);
+		if (send(sockClnt, (const char*)&lgir, sizeof(LoginResult), 0) < 0)
+		{
+			cout << "发送失败！" << endl;
+			return -1;
+		}
+		else
+		{
+			cout << "发送成功！" << endl;
+		}
+
+	}
+	break;
+	case CMD_LOGOUT:
+	{
+		Logout logout;
+		recv(sockClnt, (char *)&logout + sizeof(DataHeader), sizeof(Logout) - sizeof(DataHeader), 0);
+		// 忽略对账号密码的验证，只是简单打印出来
+		cout << "收到命令 CMD_LOGOUT： 信息长度=" << logout.dataLen << " 用户名="
+			<< logout.username << endl;
+		cout << "发送退出回执信息，";
+		LogoutResult lgor(0);
+		if (send(sockClnt, (const char*)&lgor, sizeof(LogoutResult), 0) < 0)
+		{
+			cout << "发送失败！" << endl;
+			return -1;
+		}
+		else
+		{
+			cout << "发送成功！" << endl;
+		}
+
+	}
+	break;
+	default:
+		cout << "收到未知命令，向客户端发送错误标识。" << endl;
+		Error e;
+		if (send(sockClnt, (const char*)&e, sizeof(Error), 0) < 0)
+		{
+			cout << "发送失败！" << endl;
+			return -1;
+		}
+		else
+		{
+			cout << "发送成功！" << endl;
+		}
+
+		break;
+	}
+
+
+	return 0;
+}
 int main() {
 	WORD ver = MAKEWORD(2, 2);
 	WSADATA data;
@@ -91,98 +173,82 @@ int main() {
 	}
 	else
 	{
-		cout << "监网络端口成功！" << endl;
+		cout << "监听网络端口成功！" << endl;
 	}
-	// 4 等待接受客户端连接
-	sockaddr_in saClnt;
-	int saClntLen = sizeof(saClnt);
-	SOCKET sockClnt;
-	if ((sockClnt = accept(sockSrv, (sockaddr*)&saClnt, &saClntLen)) == INVALID_SOCKET)
-	{
-		cout << "接收到无效客户端SOCKET！" << endl;
-
-	}
-	else
-	{
-		cout << "新客户端加入，" << inet_ntoa(saClnt.sin_addr) << endl;
-
-	}
+	
 	while (true)
 	{
-		// 5 接收客户端发送的请求
-		int rcvBufLen;
-		DataHeader dh;
-		rcvBufLen = recv(sockClnt,(char *)&dh, sizeof(DataHeader), 0);
-		if (rcvBufLen <= 0)
+		// 创建FD_SET，是socket的集合
+		fd_set fdRead;
+		fd_set fdWrite;
+		fd_set fdExp;
+
+		// 先清空集合
+		FD_ZERO(&fdRead);
+		FD_ZERO(&fdWrite);
+		FD_ZERO(&fdExp);
+
+		// 将socket放入集合
+		FD_SET(sockSrv, &fdRead);
+		FD_SET(sockSrv, &fdWrite);
+		FD_SET(sockSrv, &fdExp);
+
+		// 将已经链接的socket客户端都加入到fdRead集合中
+		for (int i = 0; i < g_clients.size(); i++)
 		{
-			cout << "客户端退出，结束任务。" << endl;
-			break;
+			FD_SET(g_clients[i], &fdRead);
+
 		}
-		// 6 处理请求
-		switch (dh.cmd)
+		// select 会根据集合中的socket实际情况来重置这些集合，
+		// 就是将集合中无操作的socket清除
+		int ret_slt = select(sockSrv + 1, &fdRead, &fdWrite, &fdExp, NULL);
+		if (ret_slt < 0)
 		{
-			case CMD_LOGIN:
-			{
-				Login login;
-				recv(sockClnt, (char *)&login+sizeof(DataHeader), sizeof(Login)-sizeof(DataHeader), 0);
-				// 忽略对账号密码的验证，只是简单打印出来
-				cout << "收到命令 CMD_LOGIN： 信息长度="<< login.dataLen << " 用户名="
-					 << login.username << " 密码=" << login.password << endl;
-				cout << "发送登录回执信息，";
-				LoginResult lgir(0);
-				if (send(sockClnt, (const char*)&lgir, sizeof(LoginResult), 0) < 0)
-				{
-					cout << "发送失败！" << endl;
-				}
-				else
-				{
-					cout << "发送成功！" << endl;
-				}
-
-			}
+			cout << "退出，结束任务。" << endl;
 			break;
-			case CMD_LOGOUT:
-			{
-				Logout logout;
-				recv(sockClnt, (char *)&logout + sizeof(DataHeader), sizeof(Logout) - sizeof(DataHeader), 0);
-				// 忽略对账号密码的验证，只是简单打印出来
-				cout << "收到命令 CMD_LOGOUT： 信息长度="<< logout.dataLen << " 用户名=" 
-					 << logout.username  << endl;
-				cout << "发送退出回执信息，";
-				LogoutResult lgor(0);
-				if (send(sockClnt, (const char*)&lgor, sizeof(LogoutResult), 0) < 0)
-				{
-					cout << "发送失败！" << endl;
-				}
-				else
-				{
-					cout << "发送成功！" << endl;
-				}
 
-			}
-			break;
-		default:
-			cout << "收到未知命令，向客户端发送错误标识。" << endl;
-			Error e;
-			if (send(sockClnt, (const char*)&e, sizeof(Error), 0) < 0)
+		}
+
+
+		if (FD_ISSET(sockSrv, &fdRead))
+		{
+			FD_CLR(sockSrv, &fdRead);
+			// 4 等待接受客户端连接
+			sockaddr_in saClnt;
+			int saClntLen = sizeof(saClnt);
+			SOCKET sockClnt;
+			if ((sockClnt = accept(sockSrv, (sockaddr*)&saClnt, &saClntLen)) == INVALID_SOCKET)
 			{
-				cout << "发送失败！" << endl;
+				cout << "接收到无效客户端SOCKET！" << endl;
+
 			}
 			else
 			{
-				cout << "发送成功！" << endl;
+				cout << "新客户端加入，" << inet_ntoa(saClnt.sin_addr) << endl;
+				// 将新客户端socket加入到全局数组中
+				g_clients.push_back(sockClnt);
 			}
 
-			break;
 		}
-		
-		
+
+		// 循环的处理有操作的多个客户端
+		for (size_t i = 0; i < fdRead.fd_count; i++)
+		{
+			if (-1 == processer(fdRead.fd_array[i])) {
+				auto iter = find(g_clients.begin(), g_clients.end(), fdRead.fd_array[i]);
+				if (iter != g_clients.end())
+				{
+					g_clients.erase(iter);
+				}
+			}
+		}
+
 	}
-	
-
-	
-
-	// 6 关闭套接字
+	for (int i = 0; i < g_clients.size(); i++)
+	{
+		closesocket(g_clients[i]);
+	}
+	// 8 关闭套接字
 	closesocket(sockSrv);
 	// 清除windows socket 环境
 	WSACleanup();
