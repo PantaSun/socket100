@@ -77,7 +77,7 @@ int processer(SOCKET sockClnt) {
 	rcvBufLen = recv(sockClnt, (char *)&dh, sizeof(DataHeader), 0);
 	if (rcvBufLen <= 0)
 	{
-		cout << "客户端退出，结束任务。" << endl;
+		cout << "客户端socket=<"<< sockClnt << ">退出，结束任务。" << endl;
 		return -1;
 	}
 
@@ -275,7 +275,7 @@ int main() {
 				}
 			}
 		}
-		cout << "服务器空闲时间处理其他事物。。。" << endl;
+		//cout << "服务器空闲时间处理其他事物。。。" << endl;
 
 	}
 	for (int i = 0; i < g_clients.size(); i++)

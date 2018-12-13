@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <WinSock2.h>
 #include <iostream>
+#include <thread>
 //#pragma comment(lib, "ws2_32.lib")
 
 using namespace std;
@@ -65,15 +66,77 @@ struct Error : public DataHeader
 		CMD_LOGOUT), result(-1) {}
 	int result;
 };
+bool g_exit = false;
+void cmdThread(SOCKET sockClnt) {
+	while (true)
+	{
+		// 3 输入请求命令
+		char cmdBuf[128];
+		cout << endl << "=============================== " << endl;
+		cout << "请输入命令（输入‘q’退出）：" << endl;
+		cin >> cmdBuf;
+		// 4 处理请求
+		if (strcmp(cmdBuf, "q") == 0)
+		{
+			g_exit = true;
+			return;
+		}
+		else  if (strcmp(cmdBuf, "login") == 0)
+		{
+			Login login;
+			strcpy(login.username, "Saber");
+			strcpy(login.password, "wuwangsaigao!");
+			// 5 向服务器发送请求
+			if (send(sockClnt, (const char*)&login, sizeof(Login), 0) < 0)
+			{
+				cout << "发送失败！" << endl;
 
+			}
+			else
+			{
+				cout << "发送成功！" << endl;
 
+			}
+
+			// 6接受服务器返回信息
+			LoginResult lgir;
+			recv(sockClnt, (char*)&lgir, sizeof(LoginResult), 0);
+			cout << "登录结果（0表示成功，-1表示失败）：" << lgir.result << endl;
+		}
+		else if (strcmp(cmdBuf, "logout") == 0)
+		{
+			Logout logout;
+			strcpy(logout.username, "Saber");
+			// 5 向服务器发送请求
+			if (send(sockClnt, (const char*)&logout, sizeof(Logout), 0) < 0)
+			{
+				cout << "发送失败！" << endl;
+
+			}
+			else
+			{
+				cout << "发送成功！" << endl;
+
+			}
+			LoginResult lgor;
+			recv(sockClnt, (char*)&lgor, sizeof(LogoutResult), 0);
+			cout << "退出结果（0表示成功，-1表示失败）：" << lgor.result << endl;
+		}
+		else
+		{
+			cout << "未知命令，请重试！" << endl;
+			continue;
+		}
+	}
+	
+}
 // 对服务端socket进行处理
-int processer(SOCKET sockSrv) {
+int processer(SOCKET sockClnt) {
 
 	// 5 接收客户端发送的请求
 	int rcvBufLen;
 	DataHeader dh;
-	rcvBufLen = recv(sockSrv, (char *)&dh, sizeof(DataHeader), 0);
+	rcvBufLen = recv(sockClnt, (char *)&dh, sizeof(DataHeader), 0);
 	if (rcvBufLen <= 0)
 	{
 		cout << "与服务器断开连接，结束任务。" << endl;
@@ -86,7 +149,7 @@ int processer(SOCKET sockSrv) {
 	case CMD_LOGIN_RESULT:
 	{
 		LoginResult lir;
-		recv(sockSrv, (char *)&lir + sizeof(DataHeader), sizeof(LoginResult) - sizeof(DataHeader), 0);
+		recv(sockClnt, (char *)&lir + sizeof(DataHeader), sizeof(LoginResult) - sizeof(DataHeader), 0);
 		cout << "收到服务器消息 CMD_LOGIN_RESULT： 信息长度=" << lir.dataLen << endl;
 
 	}
@@ -94,14 +157,14 @@ int processer(SOCKET sockSrv) {
 	case CMD_LOGOUT_RESULT:
 	{
 		LogoutResult lor;
-		recv(sockSrv, (char *)&lor + sizeof(DataHeader), sizeof(LogoutResult) - sizeof(DataHeader), 0);
+		recv(sockClnt, (char *)&lor + sizeof(DataHeader), sizeof(LogoutResult) - sizeof(DataHeader), 0);
 		cout << "收到服务器消息 CMD_LOGOUT_RESULT： 信息长度=" << lor.dataLen << endl;
 
 	}
 	case CMD_NEW_USER_JOIN:
 	{
 		NewUserJoin nuserin;
-		recv(sockSrv, (char *)&nuserin + sizeof(DataHeader), sizeof(NewUserJoin) - sizeof(DataHeader), 0);
+		recv(sockClnt, (char *)&nuserin + sizeof(DataHeader), sizeof(NewUserJoin) - sizeof(DataHeader), 0);
 		cout << "收到服务器消息 NEW_USER_Join： socket=" << nuserin.sock << endl;
 
 	}
@@ -143,8 +206,13 @@ int main() {
 		cout << "连接服务器成功！" << endl;
 
 	}
+	// 启动线程
+	thread t1(cmdThread, sockClnt);
 
-	while (true)
+	// 将子线程与主线程分离
+	t1.detach();
+
+	while (!g_exit)
 	{
 		/* 不再接受命令行输入
 		// 3 输入请求命令
@@ -227,21 +295,7 @@ int main() {
 			}
 		}
 
-		cout << "客户端空闲时间处理其他事物。。。" << endl;
-		Login login;
-		strcpy(login.username, "Saber");
-		strcpy(login.password, "wuwangsaigao!");
-		// 5 向服务器发送请求
-		if (send(sockClnt, (const char*)&login, sizeof(Login), 0) < 0)
-		{
-			cout << "发送失败！" << endl;
-
-		}
-		else
-		{
-			cout << "发送成功！" << endl;
-
-		}
+		//cout << "客户端空闲时间处理其他事物。。。" << endl;
 		
 		Sleep(1000);
 
