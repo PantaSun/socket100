@@ -7,24 +7,25 @@
 
 using namespace std;
 
-enum CMD{
+enum CMD {
 	CMD_LOGIN,
 	CMD_LOGIN_RESULT,
 	CMD_LOGOUT,
 	CMD_LOGOUT_RESULT,
+	CMD_NEW_USER_JOIN,
 	CMD_ERROR
 };
 struct DataHeader
 {
 	short dataLen;
 	short cmd;
-	DataHeader(){}
-	DataHeader(unsigned int dl, int c):dataLen(dl), cmd(c){}
+	DataHeader() {}
+	DataHeader(unsigned int dl, int c) :dataLen(dl), cmd(c) {}
 };
 
-struct Login: public DataHeader
+struct Login : public DataHeader
 {
-	Login():DataHeader(sizeof(Login), CMD_LOGIN){}
+	Login() :DataHeader(sizeof(Login), CMD_LOGIN) {}
 	char username[32];
 	char password[32];
 };
@@ -38,20 +39,27 @@ struct Logout : public DataHeader
 struct LogoutResult : public DataHeader
 {
 	LogoutResult() {}
-	LogoutResult(int r) :DataHeader(sizeof(LogoutResult), 
-						CMD_LOGOUT), result(r) {}
+	LogoutResult(int r) :DataHeader(sizeof(LogoutResult),
+		CMD_LOGOUT), result(r) {}
 	int result;
 };
 
 struct LoginResult : public DataHeader
 {
-	LoginResult(){}
+	LoginResult() {}
 	LoginResult(int r) :DataHeader(sizeof(LoginResult),
-						CMD_LOGOUT), result(r) {}
+		CMD_LOGOUT), result(r) {}
 	int result;
 };
 
-struct Error: public DataHeader
+struct NewUserJoin : public DataHeader
+{
+	NewUserJoin() :DataHeader(sizeof(NewUserJoin),
+		CMD_NEW_USER_JOIN), sock(0) {}
+	int sock;
+};
+
+struct Error : public DataHeader
 {
 	Error() :DataHeader(sizeof(Error),
 		CMD_LOGOUT), result(-1) {}
@@ -59,6 +67,52 @@ struct Error: public DataHeader
 };
 
 
+// 对服务端socket进行处理
+int processer(SOCKET sockSrv) {
+
+	// 5 接收客户端发送的请求
+	int rcvBufLen;
+	DataHeader dh;
+	rcvBufLen = recv(sockSrv, (char *)&dh, sizeof(DataHeader), 0);
+	if (rcvBufLen <= 0)
+	{
+		cout << "与服务器断开连接，结束任务。" << endl;
+		return -1;
+	}
+
+	// 6 处理请求
+	switch (dh.cmd)
+	{
+	case CMD_LOGIN_RESULT:
+	{
+		LoginResult lir;
+		recv(sockSrv, (char *)&lir + sizeof(DataHeader), sizeof(LoginResult) - sizeof(DataHeader), 0);
+		cout << "收到服务器消息 CMD_LOGIN_RESULT： 信息长度=" << lir.dataLen << endl;
+
+	}
+	break;
+	case CMD_LOGOUT_RESULT:
+	{
+		LogoutResult lor;
+		recv(sockSrv, (char *)&lor + sizeof(DataHeader), sizeof(LogoutResult) - sizeof(DataHeader), 0);
+		cout << "收到服务器消息 CMD_LOGOUT_RESULT： 信息长度=" << lor.dataLen << endl;
+
+	}
+	case CMD_NEW_USER_JOIN:
+	{
+		NewUserJoin nuserin;
+		recv(sockSrv, (char *)&nuserin + sizeof(DataHeader), sizeof(NewUserJoin) - sizeof(DataHeader), 0);
+		cout << "收到服务器消息 NEW_USER_Join： socket=" << nuserin.sock << endl;
+
+	}
+	break;
+	default:
+		break;
+	}
+
+
+	return 0;
+}
 
 int main() {
 	WORD ver = MAKEWORD(2, 2);
@@ -92,6 +146,7 @@ int main() {
 
 	while (true)
 	{
+		/* 不再接受命令行输入
 		// 3 输入请求命令
 		char cmdBuf[128];
 		cout << endl << "=============================== " << endl;
@@ -147,10 +202,48 @@ int main() {
 		{
 			cout << "未知命令，请重试！" << endl;
 			continue;
-		}
+		}*/
 	
+		fd_set fdRead;
+		FD_ZERO(&fdRead);
+		FD_SET(sockClnt, &fdRead);
 
+		timeval t = { 0, 0 };
+		int ret_slt = select(sockClnt + 1, &fdRead, NULL, NULL, &t);
+
+		if (ret_slt < 0)
+		{
+			cout << "select任务结束，退出" << endl;
+			break;
+		}
 		
+		if (FD_ISSET(sockClnt, &fdRead))
+		{
+			FD_CLR(sockClnt, &fdRead);
+			if (-1 == processer(sockClnt))
+			{
+				cout << "processor结束" << endl;
+				break;
+			}
+		}
+
+		cout << "客户端空闲时间处理其他事物。。。" << endl;
+		Login login;
+		strcpy(login.username, "Saber");
+		strcpy(login.password, "wuwangsaigao!");
+		// 5 向服务器发送请求
+		if (send(sockClnt, (const char*)&login, sizeof(Login), 0) < 0)
+		{
+			cout << "发送失败！" << endl;
+
+		}
+		else
+		{
+			cout << "发送成功！" << endl;
+
+		}
+		
+		Sleep(1000);
 
 	}
 	

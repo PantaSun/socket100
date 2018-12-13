@@ -11,6 +11,7 @@ enum CMD {
 	CMD_LOGIN_RESULT,
 	CMD_LOGOUT,
 	CMD_LOGOUT_RESULT,
+	CMD_NEW_USER_JOIN,
 	CMD_ERROR
 };
 struct DataHeader
@@ -50,6 +51,13 @@ struct LoginResult : public DataHeader
 	int result;
 };
 
+struct NewUserJoin : public DataHeader
+{
+	NewUserJoin():DataHeader(sizeof(NewUserJoin), 
+		CMD_NEW_USER_JOIN), sock(0){}
+	int sock;
+};
+
 struct Error : public DataHeader
 {
 	Error() :DataHeader(sizeof(Error),
@@ -81,7 +89,7 @@ int processer(SOCKET sockClnt) {
 		Login login;
 		recv(sockClnt, (char *)&login + sizeof(DataHeader), sizeof(Login) - sizeof(DataHeader), 0);
 		// 忽略对账号密码的验证，只是简单打印出来
-		cout << "收到命令 CMD_LOGIN： 信息长度=" << login.dataLen << " 用户名="
+		cout << "收到命令 CMD_LOGIN： socket = <" << sockClnt << "> 信息长度=" << login.dataLen << " 用户名="
 			<< login.username << " 密码=" << login.password << endl;
 		cout << "发送登录回执信息，";
 		LoginResult lgir(0);
@@ -102,7 +110,7 @@ int processer(SOCKET sockClnt) {
 		Logout logout;
 		recv(sockClnt, (char *)&logout + sizeof(DataHeader), sizeof(Logout) - sizeof(DataHeader), 0);
 		// 忽略对账号密码的验证，只是简单打印出来
-		cout << "收到命令 CMD_LOGOUT： 信息长度=" << logout.dataLen << " 用户名="
+		cout << "收到命令 CMD_LOGOUT： socket = <"<< sockClnt <<"> 信息长度=" << logout.dataLen << " 用户名="
 			<< logout.username << endl;
 		cout << "发送退出回执信息，";
 		LogoutResult lgor(0);
@@ -201,7 +209,13 @@ int main() {
 		}
 		// select 会根据集合中的socket实际情况来重置这些集合，
 		// 就是将集合中无操作的socket清除
-		int ret_slt = select(sockSrv + 1, &fdRead, &fdWrite, &fdExp, NULL);
+		// 最后一个参数为NULL表示阻塞模式，select会一直查询fdRead中的socket
+		// 直到有至少一个socket有操作时才返回
+		// int ret_slt = select(sockSrv + 1, &fdRead, &fdWrite, &fdExp, NULL);
+		
+		timeval t = { 0,0 };
+		// 这里将最后一个参数修改为t，这时就是非阻塞模式了，select对每个socket查询一次就返回
+		int ret_slt = select(sockSrv + 1, &fdRead, &fdWrite, &fdExp, &t);
 		if (ret_slt < 0)
 		{
 			cout << "退出，结束任务。" << endl;
@@ -225,6 +239,25 @@ int main() {
 			else
 			{
 				cout << "新客户端加入，" << inet_ntoa(saClnt.sin_addr) << endl;
+
+				// 向其他客户端广播新用户的加入
+				cout << "向其他客户端广播新用户的加入：" << endl;
+				for (int i = 0; i < g_clients.size(); i++)
+				{
+					NewUserJoin nuserin;
+					nuserin.sock = sockClnt;
+					if (send(g_clients[i], (const char*)&nuserin, sizeof(NewUserJoin), 0) < 0)
+					{
+						cout << "发送失败！" << i+1 << endl;
+						return -1;
+					}
+					else
+					{
+						cout << "发送成功！" << i+1 << endl;
+					}
+
+
+				}
 				// 将新客户端socket加入到全局数组中
 				g_clients.push_back(sockClnt);
 			}
@@ -242,6 +275,7 @@ int main() {
 				}
 			}
 		}
+		cout << "服务器空闲时间处理其他事物。。。" << endl;
 
 	}
 	for (int i = 0; i < g_clients.size(); i++)
