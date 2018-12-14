@@ -39,7 +39,7 @@ struct LogoutResult : public DataHeader
 {
 	LogoutResult() {}
 	LogoutResult(int r) :DataHeader(sizeof(LogoutResult),
-		CMD_LOGOUT), result(r) {}
+		CMD_LOGOUT_RESULT), result(r) {}
 	int result;
 };
 
@@ -47,7 +47,7 @@ struct LoginResult : public DataHeader
 {
 	LoginResult() {}
 	LoginResult(int r) :DataHeader(sizeof(LoginResult),
-		CMD_LOGOUT), result(r) {}
+		CMD_LOGOUT_RESULT), result(r) {}
 	int result;
 };
 
