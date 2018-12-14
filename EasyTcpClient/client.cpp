@@ -20,7 +20,8 @@ void cmdThread(EasyTcpClient *client) {
 		if (strcmp(cmdBuf, "q") == 0)
 		{
 			client->Close();
-			return;
+			cout << "cmdThread 线程已经退出！" << endl;
+			break;
 		}
 		else  if (strcmp(cmdBuf, "login") == 0)
 		{
@@ -145,7 +146,7 @@ int main() {
 
 		//cout << "客户端空闲时间处理其他事物。。。" << endl;
 		
-		Sleep(1000);
+		//Sleep(1000);
 
 	}
 	

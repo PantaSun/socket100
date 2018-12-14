@@ -82,12 +82,12 @@ public:
 		int  ret = connect(_sock, (sockaddr*)&saSrv, sizeof(saSrv));
 		if (ret == SOCKET_ERROR)
 		{
-			std::cout << "连接服务器失败！" << std::endl;
+			std::cout << "<socket="<< _sock <<">连接服务器<"<< ip << ":" << port <<">失败！" << std::endl;
 			return -1;
 		}
 		else
 		{
-			std::cout << "连接服务器成功！" << std::endl;
+			std::cout << "<socket=" << _sock << ">连接服务器<" << ip << ":" << port << ">成功！" << std::endl;
 			return ret;
 		}
 	}
@@ -132,6 +132,7 @@ public:
 			if (ret_slt < 0)
 			{
 				std::cout << "socket=<" << _sock << "> select任务结束，退出" << std::endl;
+				Close();
 				return false;
 			}
 
@@ -141,6 +142,7 @@ public:
 				if (-1 == RecvData(_sock))
 				{
 					std::cout << "processor结束" << std::endl;
+					Close();
 					return false;
 				}
 			}
