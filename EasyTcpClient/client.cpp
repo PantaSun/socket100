@@ -75,15 +75,15 @@ int main() {
 	client.InitSocket();
 	//2 连接服务器
 	client.Connect("127.0.0.1", 4567);
-	// 启动线程
-	thread t1(cmdThread, &client);
 
-	// 将子线程与主线程分离
-	t1.detach();
+	Login login;
+	strcpy(login.username, "saber");
+	strcpy(login.password, "wuwangsaigao!");
 	   
 	while (client.isRun())
 	{
 		client.InProcess();
+		client.SendData(&login);
 		/* 不再接受命令行输入
 		// 3 输入请求命令
 		char cmdBuf[128];

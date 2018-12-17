@@ -32,19 +32,21 @@ struct Logout : public DataHeader
 
 struct LogoutResult : public DataHeader
 {
-	LogoutResult() {}
-	LogoutResult(int r) :DataHeader(sizeof(LogoutResult),
+
+	LogoutResult(int r = 0) :DataHeader(sizeof(LogoutResult),
 		CMD_LOGOUT_RESULT), result(r) {}
 	int result;
 };
 
 struct LoginResult : public DataHeader
 {
-	LoginResult() {}
-	LoginResult(int r) :DataHeader(sizeof(LoginResult),
+
+	LoginResult(int r = 0) :DataHeader(sizeof(LoginResult),
 		CMD_LOGIN_RESULT), result(r) {}
 	int result;
+	char data[1024];
 };
+
 
 struct NewUserJoin : public DataHeader
 {

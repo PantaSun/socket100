@@ -156,22 +156,53 @@ public:
 	{
 		return _sock != INVALID_SOCKET;
 	}
+#define RECV_BUFF_SIZE 10240
+	// 接受缓冲区
+	char _rcvBuff[RECV_BUFF_SIZE] = {};
+	// 第二缓冲区
+	char _rcvMsg[RECV_BUFF_SIZE * 10] = {};
+	// 消息缓冲区数据尾部位置
+	unsigned int _lastPos = 0;
 
-	// 接受网络消息
+	// 接受网络消息，可以处理少包、粘包问题
 	int RecvData(SOCKET sockClnt) 
 	{
-		char recvBuf[4096] = {};
-		// 5 接收客户端发送的请求
-		int rcvBufLen;
-		rcvBufLen = recv(sockClnt, recvBuf, sizeof(DataHeader), 0);
-		DataHeader *dh = (DataHeader*)recvBuf;
-		if (rcvBufLen <= 0)
+		int rcvBuffLen = recv(sockClnt, _rcvBuff, RECV_BUFF_SIZE, 0);
+		
+		if (rcvBuffLen <= 0)
 		{
-			std::cout << "与服务器断开连接，结束任务。" << std::endl;
+			printf("客户端<socket=%d>已经断开连接，结束任务。\n", (int)sockClnt);
 			return -1;
 		}
-		recv(sockClnt, recvBuf + sizeof(DataHeader), dh->dataLen - sizeof(DataHeader), 0);
-		MsgProcessor(dh);
+		
+		// 将接收的数据拷贝到消息缓冲区
+		memcpy(_rcvMsg + _lastPos, _rcvBuff, rcvBuffLen);
+		// 消息缓冲区的数据长度大于消息头DataHeader的长度
+		_lastPos += rcvBuffLen;
+		// 判断消息缓冲区的数据长度大于消息头DataHeader长度
+		while (_lastPos >= sizeof(DataHeader))
+		{
+			// 可以知道当前数据长度
+			DataHeader *dh = (DataHeader*)_rcvMsg;
+			if (_lastPos >= dh->dataLen)
+			{
+				// 消息缓冲区剩余未处理数据的长度
+				unsigned int reDataLen = _lastPos - dh->dataLen;
+				// 处理网络消息
+				MsgProcessor(dh);
+				// 将消息缓冲区中剩余未处理数据前移
+				memcpy(_rcvMsg, _rcvMsg + dh->dataLen, reDataLen);
+				// 将消息缓冲区数据尾部位置前移
+				_lastPos = reDataLen;
+
+			}
+			else
+			{
+				// 消息缓冲区剩余数据不够一条完整的消息
+				break;
+			}
+
+		 }
 		return 0;
 	}
 
@@ -202,6 +233,11 @@ public:
 			}
 			break;
 			default:
+			{
+				Error *er = (Error*)dh;
+				std::cout << "收到服务器消息 ERROR： 信息长度=" << er->dataLen << std::endl;
+
+			}
 				break;
 		}
 

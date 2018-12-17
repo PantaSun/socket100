@@ -248,20 +248,26 @@ public:
 		return _sock != INVALID_SOCKET;
 	}
 
+	char recvBuf[409600] = {};
 	// 接收客户端发送的请求
-	int RecvData(SOCKET _cSock) {
+	int RecvData(SOCKET cSock) {
 
-		char recvBuf[4096] = {};
+		
 		int rcvBufLen;
-		rcvBufLen = recv(_cSock, recvBuf, sizeof(DataHeader), 0);
-		DataHeader *dh = (DataHeader*)recvBuf;
+		//rcvBufLen = recv(cSock, recvBuf, sizeof(DataHeader), 0);
+		rcvBufLen = recv(cSock, recvBuf, 409600, 0);
+		//printf("rcvBuffLen=%d\n", rcvBufLen);
+		LoginResult lir;
+		SendData(cSock, &lir);
+		/*DataHeader *dh = (DataHeader*)recvBuf;
 		if (rcvBufLen <= 0)
 		{
-			printf("客户端<socket=%d>已经断开连接，结束任务。\n", (int)_cSock);
+			printf("客户端<socket=%d>已经断开连接，结束任务。\n", (int)cSock);
 			return -1;
 		}
-		recv(_cSock, recvBuf + sizeof(DataHeader), dh->dataLen - sizeof(DataHeader), 0);
-		OnNetMsg(dh, _cSock);
+		recv(cSock, recvBuf + sizeof(DataHeader), dh->dataLen - sizeof(DataHeader), 0);
+		OnNetMsg(dh, cSock);
+		*/
 		return 0;
 	}
 	// 响应网络消息
