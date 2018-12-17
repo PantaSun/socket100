@@ -83,6 +83,7 @@ int main() {
 	while (client.isRun())
 	{
 		client.InProcess();
+		//printf("发送登录请求\n");
 		client.SendData(&login);
 		/* 不再接受命令行输入
 		// 3 输入请求命令

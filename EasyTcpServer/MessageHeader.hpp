@@ -22,6 +22,7 @@ struct Login : public DataHeader
 	Login() :DataHeader(sizeof(Login), CMD_LOGIN) {}
 	char username[32];
 	char password[32];
+	char data[932];
 };
 
 struct Logout : public DataHeader
@@ -32,8 +33,8 @@ struct Logout : public DataHeader
 
 struct LogoutResult : public DataHeader
 {
-	
-	LogoutResult(int r=0) :DataHeader(sizeof(LogoutResult),
+
+	LogoutResult(int r = 0) :DataHeader(sizeof(LogoutResult),
 		CMD_LOGOUT_RESULT), result(r) {}
 	int result;
 };
@@ -41,11 +42,12 @@ struct LogoutResult : public DataHeader
 struct LoginResult : public DataHeader
 {
 
-	LoginResult(int r=0) :DataHeader(sizeof(LoginResult),
+	LoginResult(int r = 0) :DataHeader(sizeof(LoginResult),
 		CMD_LOGIN_RESULT), result(r) {}
 	int result;
-	char data[1024];
+	char data[992];
 };
+
 
 struct NewUserJoin : public DataHeader
 {
@@ -57,7 +59,7 @@ struct NewUserJoin : public DataHeader
 struct Error : public DataHeader
 {
 	Error() :DataHeader(sizeof(Error),
-		CMD_LOGOUT), result(-1) {}
+		CMD_ERROR), result(-1) {}
 	int result;
 };
 

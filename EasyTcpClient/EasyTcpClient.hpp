@@ -174,6 +174,7 @@ public:
 			printf("客户端<socket=%d>已经断开连接，结束任务。\n", (int)sockClnt);
 			return -1;
 		}
+		//printf("rcvBuffLen = %d\n", rcvBuffLen);
 		
 		// 将接收的数据拷贝到消息缓冲区
 		memcpy(_rcvMsg + _lastPos, _rcvBuff, rcvBuffLen);
@@ -214,28 +215,28 @@ public:
 			case CMD_LOGIN_RESULT:
 			{
 				LoginResult *lir = (LoginResult*)dh;
-				std::cout << "收到服务器消息 CMD_LOGIN_RESULT： 信息长度=" << lir->dataLen << std::endl;
+				//std::cout << "收到服务器消息 CMD_LOGIN_RESULT： 信息长度=" << lir->dataLen << std::endl;
 
 			}
 			break;
 			case CMD_LOGOUT_RESULT:
 			{
 				LogoutResult *lor = (LogoutResult *)dh;
-				std::cout << "收到服务器消息 CMD_LOGOUT_RESULT： 信息长度=" << lor->dataLen << std::endl;
+				//std::cout << "收到服务器消息 CMD_LOGOUT_RESULT： 信息长度=" << lor->dataLen << std::endl;
 
 			}
 			break;
 			case CMD_NEW_USER_JOIN:
 			{
 				NewUserJoin *nuserin = (NewUserJoin*)dh;
-				std::cout << "收到服务器消息 NEW_USER_Join： socket=" << nuserin->sock << std::endl;
+				//std::cout << "收到服务器消息 NEW_USER_Join： socket=" << nuserin->sock << std::endl;
 
 			}
 			break;
 			default:
 			{
 				Error *er = (Error*)dh;
-				std::cout << "收到服务器消息 ERROR： 信息长度=" << er->dataLen << std::endl;
+				//std::cout << "收到服务器消息 ERROR： 信息长度=" << er->dataLen << std::endl;
 
 			}
 				break;
