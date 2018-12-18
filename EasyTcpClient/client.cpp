@@ -7,23 +7,23 @@
 //#pragma comment(lib, "ws2_32.lib")
 #include "EasyTcpClient.hpp"
 using namespace std;
-bool g_exit = false;
-void cmdThread(EasyTcpClient *client) {
+bool g_bRun = true;
+void cmdThread() {
 	while (true)
 	{
 		// 3 输入请求命令
 		char cmdBuf[128];
-		cout << endl << "=============================== " << endl;
-		cout << "请输入命令（输入‘q’退出）：" << endl;
+		/*cout << endl << "=============================== " << endl;
+		cout << "请输入命令（输入‘q’退出）：" << endl;*/
 		cin >> cmdBuf;
 		// 4 处理请求
 		if (strcmp(cmdBuf, "q") == 0)
 		{
-			client->Close();
+			g_bRun = false;
 			cout << "cmdThread 线程已经退出！" << endl;
 			break;
 		}
-		else  if (strcmp(cmdBuf, "login") == 0)
+		/*else  if (strcmp(cmdBuf, "login") == 0)
 		{
 			Login login;
 			strcpy(login.username, "Saber");
@@ -57,7 +57,7 @@ void cmdThread(EasyTcpClient *client) {
 
 			}
 		
-		}
+		}*/
 		else
 		{
 			cout << "未知命令，请重试！" << endl;
@@ -74,80 +74,19 @@ int main() {
 	EasyTcpClient client;
 	client.InitSocket();
 	//2 连接服务器
-	client.Connect("127.0.0.1", 4567);
+	client.Connect("127.0.0.1", 4567); //172.27.35.1
 
+	thread t1(cmdThread);
+	t1.detach();
 	Login login;
 	strcpy(login.username, "saber");
 	strcpy(login.password, "wuwangsaigao!");
 	   
-	while (client.isRun())
+	while (g_bRun)
 	{
 		client.InProcess();
 		//printf("发送登录请求\n");
 		client.SendData(&login);
-		/* 不再接受命令行输入
-		// 3 输入请求命令
-		char cmdBuf[128];
-		cout << endl << "=============================== " << endl;
-		cout << "请输入命令（输入‘q’退出）：" << endl;
-		cin >> cmdBuf;
-		// 4 处理请求
-		if (strcmp(cmdBuf, "q") == 0)
-		{
-			break;
-		}
-		else  if(strcmp(cmdBuf, "login") == 0)
-		{
-			Login login;
-			strcpy(login.username, "Saber");
-			strcpy(login.password, "wuwangsaigao!");
-			// 5 向服务器发送请求
-			if (send(sockClnt, (const char*)&login, sizeof(Login), 0) < 0)
-			{
-				cout << "发送失败！" << endl;
-
-			}
-			else
-			{
-				cout << "发送成功！" << endl;
-
-			}
-
-			// 6接受服务器返回信息
-			LoginResult lgir;
-			recv(sockClnt, (char*)&lgir, sizeof(LoginResult), 0);
-			cout << "登录结果（0表示成功，-1表示失败）：" << lgir.result << endl;
-		}
-		else if (strcmp(cmdBuf, "logout") == 0)
-		{
-			Logout logout;
-			strcpy(logout.username, "Saber");
-			// 5 向服务器发送请求
-			if (send(sockClnt, (const char*)&logout, sizeof(Logout), 0) < 0)
-			{
-				cout << "发送失败！" << endl;
-
-			}
-			else
-			{
-				cout << "发送成功！" << endl;
-
-			}
-			LoginResult lgor;
-			recv(sockClnt, (char*)&lgor, sizeof(LogoutResult), 0);
-			cout << "退出结果（0表示成功，-1表示失败）：" << lgor.result << endl;
-		}
-		else
-		{
-			cout << "未知命令，请重试！" << endl;
-			continue;
-		}*/
-	
-		
-
-		//cout << "客户端空闲时间处理其他事物。。。" << endl;
-		
-		//Sleep(1000);
 
 	}
 	
@@ -155,7 +94,7 @@ int main() {
 	// 7 关闭套接字
 	client.Close();
 	// 清除windows套接字环境
-	
+	cout << "已经退出" << endl;
 	system("pause");
 	return 0;
 }

@@ -4,6 +4,65 @@ using namespace std;
 
 
 
+bool g_bRun = true;
+void cmdThread() {
+	while (true)
+	{
+		// 3 输入请求命令
+		char cmdBuf[128];
+		/*printf("=============================== \n");
+		printf("请输入命令（输入‘q’退出）：\n");*/
+		scanf("%s",cmdBuf);
+		// 4 处理请求
+		if (strcmp(cmdBuf, "q") == 0)
+		{
+			g_bRun = false;
+			printf("cmdThread 线程已经退出！\n");
+			break;
+		}
+		/*else  if (strcmp(cmdBuf, "login") == 0)
+		{
+			Login login;
+			strcpy(login.username, "Saber");
+			strcpy(login.password, "wuwangsaigao!");
+			// 5 向服务器发送请求
+			if (client->SendData(&login) < 0)
+			{
+				cout << "发送失败！" << endl;
+
+			}
+			else
+			{
+				cout << "发送成功！" << endl;
+
+			}
+
+		}
+		else if (strcmp(cmdBuf, "logout") == 0)
+		{
+			Logout logout;
+			strcpy(logout.username, "Saber");
+			// 5 向服务器发送请求
+			if (client->SendData(&logout)< 0)
+			{
+				cout << "发送失败！" << endl;
+
+			}
+			else
+			{
+				cout << "发送成功！" << endl;
+
+			}
+
+		}*/
+		else
+		{
+			printf("未知命令，请重试！\n");
+			continue;
+		}
+	}
+
+}
 
 // 对客户端socket进行处理
 
@@ -14,10 +73,13 @@ int main() {
 	EasyTcpServer server;
 	server.InitSocket();
 	// 2 绑定用于接收客户端连接的网络端口
-	server.Bind("127.0.0.1", 4567);
+	server.Bind(INADDR_ANY, 4567);
 	// 3 监听网络端口
 	server.Listen(5);
-	while (true)
+	std::thread t1(cmdThread);
+	t1.detach();
+
+	while (g_bRun)
 	{
 		server.OnRun();
 		

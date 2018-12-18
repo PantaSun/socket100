@@ -20,22 +20,17 @@
 
 #include<stdio.h>
 #include<vector>
-#include<thread>
-#include<mutex>
-#include<atomic>
-
+#include <thread>
 #include"MessageHeader.hpp"
 
 
 //缓冲区最小单元大小
-#ifndef RECV_BUFF_SZIE
-#define RECV_BUFF_SZIE 10240
+#ifndef RECV_BUFF_SIZE
+#define RECV_BUFF_SIZE 10240
 #endif // !RECV_BUFF_SZIE
 
-#define _CellServer_THREAD_COUNT 4
-#define RECV_BUFF_SIZE 10240
-	// 接受缓冲区
-char _rcvBuff[RECV_BUFF_SIZE] = {};
+
+
 
 class ClientSocket {
 public:
@@ -68,10 +63,8 @@ private:
 	SOCKET _sock;
 	std::vector<ClientSocket*> _clients;
 public:
-	EasyTcpServer()
-	{
-		_sock = INVALID_SOCKET;
-	}
+	EasyTcpServer():_sock(INVALID_SOCKET)
+	{}
 	virtual ~EasyTcpServer()
 	{
 		Close();
@@ -220,20 +213,20 @@ public:
 		{
 			//伯克利套接字 BSD socket
 			fd_set fdRead;//描述符（socket） 集合
-			//fd_set fdWrite;
-			//fd_set fdExp;
+			fd_set fdWrite;
+			fd_set fdExp;
 			//清理集合
 			FD_ZERO(&fdRead);
-			//FD_ZERO(&fdWrite);
-			//FD_ZERO(&fdExp);
+			FD_ZERO(&fdWrite);
+			FD_ZERO(&fdExp);
 			//将描述符（socket）加入集合
 			FD_SET(_sock, &fdRead);
-			//FD_SET(_sock, &fdWrite);
-			//FD_SET(_sock, &fdExp);
+			FD_SET(_sock, &fdWrite);
+			FD_SET(_sock, &fdExp);
 
 			SOCKET maxSock = _sock;
 			// 将已经链接的socket客户端都加入到fdRead集合中
-			for (int i = 0; i < (int)_clients.size(); i++)
+			for (int i = (int)_clients.size()-1; i >=0; i--)
 			{
 				FD_SET(_clients[i]->socketfd(), &fdRead);
 				if (maxSock < _clients[i]->socketfd())
@@ -242,8 +235,8 @@ public:
 
 			///nfds 是一个整数值 是指fd_set集合中所有描述符(socket)的范围，而不是数量
 			///既是所有文件描述符最大值+1 在Windows中这个参数可以写0
-			timeval t = { 0,0 };
-			int ret = select(maxSock + 1, &fdRead, 0, 0, &t); //
+			timeval t = { 1,0 };
+			int ret = select(maxSock + 1, &fdRead, &fdWrite, &fdExp, &t); //
 			//printf("select ret=%d count=%d\n", ret, _nCount++);
 			if (ret < 0)
 			{
