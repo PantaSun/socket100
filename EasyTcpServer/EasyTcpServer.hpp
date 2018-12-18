@@ -22,7 +22,7 @@
 #include<vector>
 #include <thread>
 #include"MessageHeader.hpp"
-
+#include "CELLTimeStamp.hpp"
 
 //缓冲区最小单元大小
 #ifndef RECV_BUFF_SIZE
@@ -34,19 +34,24 @@
 
 class ClientSocket {
 public:
-	ClientSocket(SOCKET sock = INVALID_SOCKET) :_socketfd(sock), _lastPos(0){
+	ClientSocket(SOCKET sock = INVALID_SOCKET) :_socketfd(sock), _lastPos(0)
+	{
 		memset(_rcvMsg, 0, sizeof(_rcvMsg));
 	}
-	SOCKET socketfd() {
+	SOCKET socketfd() 
+	{
 		return _socketfd;
 	}
-	int getLastPos() {
+	int getLastPos() 
+	{
 		return _lastPos;
 	}
-	void setLastPos(int pos) {
+	void setLastPos(int pos) 
+	{
 		_lastPos = pos;
 	}
-	char * rcvMsg() {
+	char * rcvMsg() 
+	{
 		return _rcvMsg;
 	}
 private:
@@ -55,6 +60,7 @@ private:
 	char _rcvMsg[RECV_BUFF_SIZE * 10];
 	// 消息缓冲区数据尾部位置
 	unsigned int _lastPos;
+	
 };
 
 class EasyTcpServer
@@ -62,8 +68,12 @@ class EasyTcpServer
 private:
 	SOCKET _sock;
 	std::vector<ClientSocket*> _clients;
+	// 计时器
+	CELLTimeStamp _time;
+	// 计数器
+	int _packsCount;
 public:
-	EasyTcpServer():_sock(INVALID_SOCKET)
+	EasyTcpServer():_sock(INVALID_SOCKET), _packsCount(0)
 	{}
 	virtual ~EasyTcpServer()
 	{
@@ -170,7 +180,8 @@ public:
 			SendDataToAll(&userJoin);
 			// 将新客户端socket加入到全局数组中
 			_clients.push_back(new ClientSocket(cSock));
-			printf("<socket=%d>新客户端加入：<socket=%d, IP=%s>\n", (int)_sock, (int)cSock, inet_ntoa(clientAddr.sin_addr));
+			printf("<socket=%d>新客户端<%d>加入：<socket=%d, IP=%s>\n", (int)_sock, _clients.size(),
+				(int)cSock, inet_ntoa(clientAddr.sin_addr));
 		}
 		return cSock;
 	}
@@ -336,6 +347,16 @@ public:
 	}
 	// 响应网络消息
 	virtual void OnNetMsg(DataHeader *dh, SOCKET cSock) {
+		_packsCount++;
+		
+		auto t1 = _time.getElapsedSecond();
+		if (t1 >= 1.0)
+		{
+			printf("time<%lf>, socket<%d>, packsCount<%d>\n", t1, _sock, _packsCount);
+			_time.update();
+			_packsCount = 0;
+		}
+
 		switch (dh->cmd)
 		{
 		case CMD_LOGIN:
@@ -343,8 +364,8 @@ public:
 			Login *lir = (Login*)dh;
 			/*printf("收到<socket=%d>消息 CMD_LOGIN： 信息长度=%d, username=%s, passwd=%s\n", (int)cSock,
 				lir->dataLen, lir->username, lir->password);*/
-			LoginResult lgir(0);
-			SendData(cSock, &lgir);
+			/*LoginResult lgir(0);
+			SendData(cSock, &lgir);*/
 		}
 		break;
 		case CMD_LOGOUT:
@@ -352,9 +373,9 @@ public:
 			Logout *lor = (Logout *)dh;
 			//printf("收到<socket=%d>消息 CMD_LOGOUT： 信息长度=%d, username=%s\n", (int)_cSock,
 			//	lor->dataLen, lor->username);
-			LogoutResult lgor(0);
+			/*LogoutResult lgor(0);
 			SendData(cSock, &lgor);
-
+*/
 		}
 		break;
 

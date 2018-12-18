@@ -69,12 +69,25 @@ void cmdThread() {
 // 对服务端socket进行处理
 
 int main() {
-	const int maxConnects = FD_SETSIZE - 1;
+	const int maxConnects = 5;
 	EasyTcpClient * clients[maxConnects];
 	for (size_t i = 0; i < maxConnects; i++)
 	{
+		if (!g_bRun)
+		{
+			return 0;
+		}
 		clients[i] = new EasyTcpClient();
+		
+	}
+	for (size_t i = 0; i < maxConnects ; i++)
+	{
+		if (!g_bRun)
+		{
+			return 0;
+		}
 		clients[i]->Connect("127.0.0.1", 4567);
+
 	}
 	// 1 建立一个socket
 //	EasyTcpClient client;
@@ -96,7 +109,7 @@ int main() {
 
 		for (size_t i = 0; i < maxConnects; i++)
 		{
-			clients[i]->InProcess();
+			//clients[i]->InProcess();
 			clients[i]->SendData(&login);
 		}
 

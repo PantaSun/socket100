@@ -2,10 +2,11 @@
 #define _EASY_TCP_CLIENT
 
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#include <WinSock2.h>
-#pragma comment(lib, "ws2_32.lib")
+	#define WIN32_LEAN_AND_MEAN
+	#define FD_SETSIZE      2506
+	#include <Windows.h>
+	#include <WinSock2.h>
+	#pragma comment(lib, "ws2_32.lib")
 
 #else
 #include <unistd.h>
