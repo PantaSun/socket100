@@ -26,7 +26,7 @@
 
 //缓冲区最小单元大小
 #ifndef RECV_BUFF_SIZE
-#define RECV_BUFF_SIZE 10240
+#define RECV_BUFF_SIZE 102400
 #endif // !RECV_BUFF_SZIE
 
 

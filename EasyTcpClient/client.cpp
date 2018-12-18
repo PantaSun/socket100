@@ -69,12 +69,18 @@ void cmdThread() {
 // 对服务端socket进行处理
 
 int main() {
-	
+	const int maxConnects = FD_SETSIZE - 1;
+	EasyTcpClient * clients[maxConnects];
+	for (size_t i = 0; i < maxConnects; i++)
+	{
+		clients[i] = new EasyTcpClient();
+		clients[i]->Connect("127.0.0.1", 4567);
+	}
 	// 1 建立一个socket
-	EasyTcpClient client;
-	client.InitSocket();
+//	EasyTcpClient client;
+	//client.InitSocket();
 	//2 连接服务器
-	client.Connect("127.0.0.1", 4567); //172.27.35.1
+	//client.Connect("127.0.0.1", 4567); //172.27.35.1
 
 	thread t1(cmdThread);
 	t1.detach();
@@ -84,15 +90,25 @@ int main() {
 	   
 	while (g_bRun)
 	{
-		client.InProcess();
-		//printf("发送登录请求\n");
-		client.SendData(&login);
+		//client.InProcess();
+		////printf("发送登录请求\n");
+		//client.SendData(&login);
+
+		for (size_t i = 0; i < maxConnects; i++)
+		{
+			clients[i]->InProcess();
+			clients[i]->SendData(&login);
+		}
 
 	}
 	
 	 
 	// 7 关闭套接字
-	client.Close();
+	//client.Close();
+	for (size_t i = 0; i < maxConnects; i++)
+	{
+		clients[i]->Close();
+	}
 	// 清除windows套接字环境
 	cout << "已经退出" << endl;
 	system("pause");
