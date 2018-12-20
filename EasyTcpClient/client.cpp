@@ -8,6 +8,13 @@
 #include "EasyTcpClient.hpp"
 using namespace std;
 bool g_bRun = true;
+
+// 客户端数
+const int maxConnects = 500;
+// 线程数
+const int tCounts = 4;
+EasyTcpClient * clients[maxConnects];
+
 void cmdThread() {
 	while (true)
 	{
@@ -23,41 +30,6 @@ void cmdThread() {
 			cout << "cmdThread 线程已经退出！" << endl;
 			break;
 		}
-		/*else  if (strcmp(cmdBuf, "login") == 0)
-		{
-			Login login;
-			strcpy(login.username, "Saber");
-			strcpy(login.password, "wuwangsaigao!");
-			// 5 向服务器发送请求
-			if (client->SendData(&login) < 0)
-			{
-				cout << "发送失败！" << endl;
-
-			}
-			else
-			{
-				cout << "发送成功！" << endl;
-
-			}
-
-		}
-		else if (strcmp(cmdBuf, "logout") == 0)
-		{
-			Logout logout;
-			strcpy(logout.username, "Saber");
-			// 5 向服务器发送请求
-			if (client->SendData(&logout)< 0)
-			{
-				cout << "发送失败！" << endl;
-
-			}
-			else
-			{
-				cout << "发送成功！" << endl;
-
-			}
-		
-		}*/
 		else
 		{
 			cout << "未知命令，请重试！" << endl;
@@ -66,62 +38,68 @@ void cmdThread() {
 	}
 	
 }
-// 对服务端socket进行处理
 
-int main() {
-	const int maxConnects = 5;
-	EasyTcpClient * clients[maxConnects];
-	for (size_t i = 0; i < maxConnects; i++)
+void sendThread(int id) {
+
+	int step	= maxConnects / tCounts;
+	int begin	= step * (id - 1);
+	int end		= step * id;
+
+	for (int  i = begin; i < end; i++)
 	{
-		if (!g_bRun)
-		{
-			return 0;
-		}
 		clients[i] = new EasyTcpClient();
-		
 	}
-	for (size_t i = 0; i < maxConnects ; i++)
+
+	for (int i = begin; i < end; i++)
 	{
-		if (!g_bRun)
-		{
-			return 0;
-		}
-		clients[i]->Connect("127.0.0.1", 4567);
-
+		if( -1 == clients[i]->Connect("127.0.0.1", 4567))
+			printf("thread<%d>, Connect=%d 失败！！！\n", id, i);
+		else
+			printf("thread<%d>, Connect=%d\n", id, i);
 	}
-	// 1 建立一个socket
-//	EasyTcpClient client;
-	//client.InitSocket();
-	//2 连接服务器
-	//client.Connect("127.0.0.1", 4567); //172.27.35.1
 
-	thread t1(cmdThread);
-	t1.detach();
 	Login login;
 	strcpy(login.username, "saber");
 	strcpy(login.password, "wuwangsaigao!");
-	   
-	while (g_bRun)
-	{
-		//client.InProcess();
-		////printf("发送登录请求\n");
-		//client.SendData(&login);
 
-		for (size_t i = 0; i < maxConnects; i++)
+	while (g_bRun)
+	{	
+		for (int i = begin; i < end; i++)
 		{
-			//clients[i]->InProcess();
 			clients[i]->SendData(&login);
 		}
 
 	}
-	
-	 
-	// 7 关闭套接字
-	//client.Close();
-	for (size_t i = 0; i < maxConnects; i++)
+
+	for (int i = begin; i < end; i++)
 	{
 		clients[i]->Close();
 	}
+
+}
+// 对服务端socket进行处理
+
+int main() {
+	
+	// UI线程
+	thread t1(cmdThread);
+	t1.detach();
+	
+	// 发送线程
+	for (int i = 0; i < tCounts; i++)
+	{
+		thread t(sendThread, i+1);
+		t.detach();
+	}
+	
+	while (g_bRun)
+	{
+		Sleep(100);
+	}
+
+	// 7 关闭套接字
+	//client.Close();
+	
 	// 清除windows套接字环境
 	cout << "已经退出" << endl;
 	system("pause");

@@ -180,8 +180,8 @@ public:
 			SendDataToAll(&userJoin);
 			// 将新客户端socket加入到全局数组中
 			_clients.push_back(new ClientSocket(cSock));
-			printf("<socket=%d>新客户端<%d>加入：<socket=%d, IP=%s>\n", (int)_sock, _clients.size(),
-				(int)cSock, inet_ntoa(clientAddr.sin_addr));
+			//printf("<socket=%d>新客户端<%d>加入：<socket=%d, IP=%s>\n", (int)_sock, _clients.size(),
+			//	(int)cSock, inet_ntoa(clientAddr.sin_addr));
 		}
 		return cSock;
 	}
@@ -260,6 +260,7 @@ public:
 			{
 				FD_CLR(_sock, &fdRead);
 				Accept();
+				return true;
 			}
 			/*for (size_t i = 0; i < fdRead.fd_count; i++)
 			{
