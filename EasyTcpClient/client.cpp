@@ -10,7 +10,7 @@ using namespace std;
 bool g_bRun = true;
 
 // 客户端数
-const int maxConnects = 4000;
+const int maxConnects = 400;
 // 线程数
 const int tCounts = 4;
 EasyTcpClient * clients[maxConnects];
