@@ -20,41 +20,6 @@ void cmdThread() {
 			printf("cmdThread 线程已经退出！\n");
 			break;
 		}
-		/*else  if (strcmp(cmdBuf, "login") == 0)
-		{
-			Login login;
-			strcpy(login.username, "Saber");
-			strcpy(login.password, "wuwangsaigao!");
-			// 5 向服务器发送请求
-			if (client->SendData(&login) < 0)
-			{
-				cout << "发送失败！" << endl;
-
-			}
-			else
-			{
-				cout << "发送成功！" << endl;
-
-			}
-
-		}
-		else if (strcmp(cmdBuf, "logout") == 0)
-		{
-			Logout logout;
-			strcpy(logout.username, "Saber");
-			// 5 向服务器发送请求
-			if (client->SendData(&logout)< 0)
-			{
-				cout << "发送失败！" << endl;
-
-			}
-			else
-			{
-				cout << "发送成功！" << endl;
-
-			}
-
-		}*/
 		else
 		{
 			printf("未知命令，请重试！\n");
@@ -76,6 +41,7 @@ int main() {
 	server.Bind(INADDR_ANY, 4567);
 	// 3 监听网络端口
 	server.Listen(5);
+	server.Start();
 	std::thread t1(cmdThread);
 	t1.detach();
 
