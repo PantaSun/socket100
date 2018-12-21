@@ -10,7 +10,7 @@ using namespace std;
 bool g_bRun = true;
 
 // 客户端数
-const int maxConnects = 400;
+const int maxConnects = 10000;
 // 线程数
 const int tCounts = 4;
 EasyTcpClient * clients[maxConnects];
@@ -59,15 +59,20 @@ void sendThread(int id) {
 	}
 	std::chrono::milliseconds t(3000);
 	std::this_thread::sleep_for(t);
-	Login login;
-	strcpy(login.username, "saber");
-	strcpy(login.password, "wuwangsaigao!");
+	Login login[10];
+	for (int i = 0; i < 10; i++)
+	{
+		strcpy(login[i].username, "saber");
+		strcpy(login[i].password, "wuwangsaigao!");
+
+	}
+	const int nLen = sizeof(login);
 
 	while (g_bRun)
 	{	
 		for (int i = begin; i < end; i++)
 		{
-			clients[i]->SendData(&login);
+			clients[i]->SendData(login, nLen);
 		}
 
 	}
