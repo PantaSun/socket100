@@ -2,7 +2,7 @@
 #define _EasyTcpServer_hpp_
 
 #ifdef _WIN32
-	#define FD_SETSIZE      2506
+	#define FD_SETSIZE      4096
 	#define WIN32_LEAN_AND_MEAN
 	#define _WINSOCK_DEPRECATED_NO_WARNINGS
 	#include<windows.h>
@@ -64,6 +64,11 @@ private:
 
 };
 
+class INetEvent {
+public:
+	// 纯虚函数
+	virtual void OnLeave(ClientSocket * pClient) = 0;
+};
 
 class CellServer
 {
@@ -75,19 +80,25 @@ private:
 	std::vector<ClientSocket*> _clientsBuff;
 	// 锁
 	std::mutex _mutex;
-
+	// 收发线程指针
 	std::thread * _pThread;
+	// 注册客户端离开事件
+	INetEvent * _pNetEvent;
 public:
 	std::atomic_int _recvCount;
 public:
 	CellServer(SOCKET sock = INVALID_SOCKET):_sock(sock),_pThread(nullptr), 
-											 _recvCount(0){}
+											 _recvCount(0), _pNetEvent(nullptr){}
 	~CellServer()
 	{
 		Close();
 		_sock = INVALID_SOCKET;
 	}
 
+	void setEventObj(INetEvent * pEvent)
+	{
+		_pNetEvent = pEvent;
+	}
 
 	//处理网络消息
 	bool OnRun()
@@ -154,6 +165,8 @@ public:
 						auto iter = _clients.begin() + i;
 						if (iter != _clients.end())
 						{
+							if (_pNetEvent)
+								_pNetEvent->OnLeave(_clients[i]);
 							delete _clients[i];
 							_clients.erase(iter);
 						}
@@ -211,15 +224,7 @@ public:
 
 	// 响应网络消息
 	virtual void OnNetMsg(DataHeader *dh, SOCKET cSock) {
-	/*	_packsCount++;
-
-		auto t1 = _time.getElapsedSecond();
-		if (t1 >= 1.0)
-		{
-			printf("time<%lf>, socket<%d>, packsCount<%d>\n", t1, _sock, _packsCount);
-			_time.update();
-			_packsCount = 0;
-		}*/
+	
 		_recvCount++;
 		switch (dh->cmd)
 		{
@@ -270,16 +275,6 @@ public:
 		return _clients.size() + _clientsBuff.size();
 	}
 
-	//发送指定Socket数据
-	int SendData(SOCKET cSock, DataHeader* header)
-	{
-		if (isRun() && header)
-		{
-			return send(cSock, (const char*)header, header->dataLen, 0);
-		}
-		return SOCKET_ERROR;
-	}
-
 
 	//是否工作中
 	bool isRun()
@@ -320,7 +315,7 @@ public:
 
 
 
-class EasyTcpServer
+class EasyTcpServer : public INetEvent
 {
 private:
 	SOCKET _sock;
@@ -328,10 +323,9 @@ private:
 	std::vector<CellServer*> _cellServers;
 	// 计时器
 	CELLTimeStamp _time;
-	// 计数器
-	int _packsCount;
+
 public:
-	EasyTcpServer():_sock(INVALID_SOCKET), _packsCount(0)
+	EasyTcpServer():_sock(INVALID_SOCKET)
 	{}
 	virtual ~EasyTcpServer()
 	{
@@ -464,6 +458,7 @@ public:
 		{
 			auto ser = new CellServer(_sock);
 			_cellServers.push_back(ser);
+			ser->setEventObj(this);
 			ser->Start();
 		}
 	}
@@ -492,7 +487,7 @@ public:
 
 			///nfds 是一个整数值 是指fd_set集合中所有描述符(socket)的范围，而不是数量
 			///既是所有文件描述符最大值+1 在Windows中这个参数可以写0
-			timeval t = { 1,0 };
+			timeval t = { 0,10 };
 			int ret = select(_sock + 1, &fdRead, &fdWrite, &fdExp, &t); //
 			//printf("select ret=%d count=%d\n", ret, _nCount++);
 			if (ret < 0)
@@ -563,7 +558,7 @@ public:
 				recvCount += ser->_recvCount;
 				ser->_recvCount = 0;
 			}
-			printf("time<%lf>, socket<%d>, clients<%d>, recvCount<%d>\n", t1, (int)_sock, _clients.size(), recvCount);
+			printf("thread<%d>, time<%lf>, socket<%d>, clients<%d>, recvCount<%d>\n", _cellServers.size(), t1, (int)_sock, _clients.size(), recvCount);
 			_time.update();
 		}
 
@@ -581,11 +576,28 @@ public:
 	void SendDataToAll(DataHeader* header)
 	{
 
-		for (int i = 0; i < _clients.size(); i++)
-			SendData(_clients[i]->socketfd(), header);
+		for (int n = (int)_clients.size() - 1; n >= 0; n--)
+		{
+			SendData(_clients[n]->socketfd(), header);
+		}
 
 	}
 
+	void OnLeave(ClientSocket * pClient)
+	{
+		for (int i = (int)_clients.size()-1; i >= 0; i--)
+		{
+			if (_clients[i] == pClient)
+			{
+				auto iter = _clients.begin() + i;
+				if (iter != _clients.end())
+				{
+					_clients.erase(iter);
+				}
+			}
+			
+		}
+	}
 };
 
 #endif // !_EasyTcpServer_hpp_

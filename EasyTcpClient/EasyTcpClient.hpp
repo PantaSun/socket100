@@ -3,7 +3,7 @@
 
 #ifdef _WIN32
 	#define WIN32_LEAN_AND_MEAN
-	#define FD_SETSIZE      2506
+	#define FD_SETSIZE      4096
 	#include <Windows.h>
 	#include <WinSock2.h>
 	#pragma comment(lib, "ws2_32.lib")

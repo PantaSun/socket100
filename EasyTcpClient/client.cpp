@@ -10,7 +10,7 @@ using namespace std;
 bool g_bRun = true;
 
 // 客户端数
-const int maxConnects = 1000;
+const int maxConnects = 4000;
 // 线程数
 const int tCounts = 4;
 EasyTcpClient * clients[maxConnects];
@@ -57,7 +57,8 @@ void sendThread(int id) {
 		else
 			printf("thread<%d>, Connect=%d\n", id, i);
 	}
-
+	std::chrono::milliseconds t(3000);
+	std::this_thread::sleep_for(t);
 	Login login;
 	strcpy(login.username, "saber");
 	strcpy(login.password, "wuwangsaigao!");

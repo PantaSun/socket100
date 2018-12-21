@@ -22,7 +22,7 @@ struct Login : public DataHeader
 	Login() :DataHeader(sizeof(Login), CMD_LOGIN) {}
 	char username[32];
 	char password[32];
-	char data[932];
+	char data[32];
 };
 
 struct Logout : public DataHeader
@@ -45,7 +45,7 @@ struct LoginResult : public DataHeader
 	LoginResult(int r = 0) :DataHeader(sizeof(LoginResult),
 		CMD_LOGIN_RESULT), result(r) {}
 	int result;
-	char data[992];
+	char data[92];
 };
 
 
